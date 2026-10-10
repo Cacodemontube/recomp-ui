@@ -1615,11 +1615,18 @@ static int cb_list_get(void *ctx, int index, RecompLauncherCNetplayLobby *out)
   out->allow_spectators = row.allow_spectators;
   out->max_spectators = row.max_spectators;
   out->spectator_count = row.spectator_count;
-#if defined(RNET_LOBBY_HAS_LIST_LATENCY)
-  /* Ours + the host's round trip to the lobby server: an estimate through
-   * the server, since there is no direct link to a room's host before
-   * joining. -1 ("—") until both are known or from an older server. */
+#if defined(RNET_LOBBY_HAS_LIST_DIRECT_LATENCY)
+  /* A direct probe to the host, timed when the list was opened or
+   * refreshed; until it lands (or where it cannot link) the estimate through
+   * the lobby server, marked so the row draws "~". -1 ("—") when neither. */
+  {
+    int direct = 0;
+    out->latency_ms = rnet_lobby_list_latency_ms(index, &direct);
+    out->latency_is_estimate = out->latency_ms >= 0 && !direct;
+  }
+#elif defined(RNET_LOBBY_HAS_LIST_LATENCY)
   out->latency_ms = rnet_lobby_list_latency_estimate_ms(index);
+  out->latency_is_estimate = out->latency_ms >= 0;
 #else
   out->latency_ms = -1;
 #endif
