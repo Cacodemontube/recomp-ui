@@ -4484,7 +4484,7 @@ void launcher_model_map_all_advance(LauncherModel* m) {
 }
 void launcher_model_begin_assist_capture(LauncherModel* m, int action,
                                          bool gamepad) {
-    if (!m->settings_bindings || action < 0 ||
+    if (!m || action < 0 ||
         action >= m->assist_binding_count)
         return;
     m->hk_capturing = false;
@@ -4538,7 +4538,7 @@ void launcher_model_reset_player_bindings(LauncherModel* m, int player) {
            sizeof m->s.player_pad_bind[player]);
 }
 void launcher_model_reset_assist_bindings(LauncherModel* m) {
-    if (!m || !m->settings_bindings) return;
+    if (!m) return;
     memcpy(m->s.assist_key_bind, m->default_assist_key_bind,
            sizeof m->s.assist_key_bind);
     memcpy(m->s.assist_pad_bind, m->default_assist_pad_bind,
