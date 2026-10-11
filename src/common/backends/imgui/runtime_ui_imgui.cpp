@@ -65,12 +65,14 @@ void draw_sections(RecompRuntimeUi *ui, const LauncherTheme &theme,
     for (size_t index = 0; index < ui->section_count; ++index) {
         ImGui::PushID(static_cast<int>(index));
         const bool selected = index == ui->section_index;
-        if (ImGui::Selectable(ui->sections[index], selected, 0,
-                              ImVec2(0.0f, theme.row_height))) {
-            ui->section_index = index;
-            if (enter_on_click) recomp_runtime_ui_enter_section(ui, index);
+        const bool clicked = ImGui::Selectable(ui->sections[index], selected, 0,
+                                               ImVec2(0.0f, theme.row_height));
+        if ((clicked || ImGui::IsItemHovered()) &&
+            (index != ui->section_index || (clicked && enter_on_click))) {
+            const int was_in_section = ui->in_section;
+            recomp_runtime_ui_enter_section(ui, index);
+            if (!(clicked && enter_on_click)) ui->in_section = was_in_section;
         }
-        if (ImGui::IsItemHovered()) ui->section_index = index;
         ImGui::PopID();
     }
 }
@@ -93,7 +95,12 @@ void draw_items(RecompRuntimeUi *ui, const LauncherTheme &theme,
                                   ImVec2(0.0f, theme.row_height))) {
                 ui->row_index = index;
                 ui->in_section = 1;
-                recomp_runtime_ui_enter_folder(ui, folder);
+                if (recomp_runtime_ui_enter_folder(ui, index)) {
+                    /* The remaining rows and hover belong to the parent page.
+                     * Draw the new page on the next frame. */
+                    ImGui::PopID();
+                    return;
+                }
             }
             if (ImGui::IsItemHovered()) {
                 ui->row_index = index;

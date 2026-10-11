@@ -74,7 +74,9 @@ size_t recomp_runtime_ui_page_entry_count(const RecompRuntimeUi *ui);
  * folder_out when given) or an out-of-range row. */
 const RecompRuntimeUiItem *recomp_runtime_ui_page_entry(
     const RecompRuntimeUi *ui, size_t row, char *folder_out, size_t folder_size);
-void recomp_runtime_ui_enter_folder(RecompRuntimeUi *ui, const char *name);
+/* Opens the folder at row using its full path component, not its display label.
+ * Returns non-zero when the page changed. */
+int recomp_runtime_ui_enter_folder(RecompRuntimeUi *ui, size_t row);
 /* Climbs one page; returns 0 (and does nothing) at the section root. */
 int recomp_runtime_ui_leave_folder(RecompRuntimeUi *ui);
 /* "Section > Page > Sub-page" for the open page. */

@@ -137,15 +137,22 @@ const RecompRuntimeUiItem *recomp_runtime_ui_page_entry(
     return item;
 }
 
-void recomp_runtime_ui_enter_folder(RecompRuntimeUi *ui, const char *name) {
-    if (!ui || !name || !*name || ui->page_depth >= RECOMP_RUNTIME_UI_MAX_DEPTH) return;
+int recomp_runtime_ui_enter_folder(RecompRuntimeUi *ui, size_t row) {
+    if (!ui || ui->page_depth >= RECOMP_RUNTIME_UI_MAX_DEPTH) return 0;
+    const char *name = NULL;
+    size_t name_len = 0;
+    page_walk(ui, row, NULL, &name, &name_len);
+    if (!name || !name_len) return 0;
     const size_t used = strlen(ui->page);
-    const size_t need = strlen(name) + (used ? 1 : 0);
-    if (used + need >= sizeof(ui->page)) return;
-    ui->row_stack[ui->page_depth++] = ui->row_index;
-    if (used) strcat(ui->page, "/");
-    strcat(ui->page, name);
+    const size_t need = name_len + (used ? 1 : 0);
+    if (used + need >= sizeof(ui->page)) return 0;
+    ui->row_stack[ui->page_depth++] = row;
+    size_t at = used;
+    if (used) ui->page[at++] = '/';
+    memcpy(ui->page + at, name, name_len);
+    ui->page[at + name_len] = '\0';
     ui->row_index = 0;
+    return 1;
 }
 
 int recomp_runtime_ui_leave_folder(RecompRuntimeUi *ui) {
@@ -291,7 +298,8 @@ void recomp_runtime_ui_adjust_current(RecompRuntimeUi *ui, int direction,
         ui, ui->row_index, folder, sizeof(folder));
     if (!item) {
         /* A folder row opens on accept; left/right do nothing. */
-        if (folder[0] && activate && !repeat) recomp_runtime_ui_enter_folder(ui, folder);
+        if (folder[0] && activate && !repeat)
+            recomp_runtime_ui_enter_folder(ui, ui->row_index);
         return;
     }
     if (!recomp_runtime_ui_item_enabled(ui, item)) return;

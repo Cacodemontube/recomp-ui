@@ -387,6 +387,37 @@ int main(void) {
         recomp_runtime_ui_destroy(n);
     }
 
+    /* Display truncation must not change a folder's path identity, including
+     * two siblings whose first 95 characters are identical. */
+    {
+        char first[102] = "Mods/", second[102] = "Mods/";
+        memset(first + 5, 'X', 96);
+        memset(second + 5, 'X', 96);
+        first[100] = 'A'; second[100] = 'B';
+        first[101] = '\0'; second[101] = '\0';
+        RecompRuntimeUiItem rows[] = {
+            { "g", first, "First", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
+            { "h", second, "Second", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
+        };
+        RecompRuntimeUiConfig long_names = {0};
+        long_names.items = rows;
+        long_names.item_count = 2;
+        long_names.callbacks.get_value = nested_get;
+        long_names.callbacks.set_value = nested_set;
+        RecompRuntimeUi *n = recomp_runtime_ui_create(&long_names);
+        assert(n != NULL);
+        recomp_runtime_ui_open(n);
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);
+        assert(nested_values['g' - 'a'] == 1 && nested_values['h' - 'a'] == 0);
+        press(n, RECOMP_RUNTIME_UI_INPUT_BACK);
+        press(n, RECOMP_RUNTIME_UI_INPUT_DOWN);
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);
+        assert(nested_values['g' - 'a'] == 1 && nested_values['h' - 'a'] == 1);
+        recomp_runtime_ui_destroy(n);
+    }
     puts("runtime UI tests passed");
     return 0;
 }
