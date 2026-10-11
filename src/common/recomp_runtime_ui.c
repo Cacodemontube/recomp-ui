@@ -46,8 +46,15 @@ static void show_status(RecompRuntimeUi *ui, const char *text, unsigned frames) 
 
 /* ---- nested pages -------------------------------------------------------- */
 
+/* An item's page path; NULL for a malformed one (a leading or trailing '/' or
+ * an empty component such as "A//B"), which is left out of the menu entirely
+ * rather than producing an unnamed or unreachable row. */
 static const char *item_path(const RecompRuntimeUiItem *item) {
-    return item->section && *item->section ? item->section : "Settings";
+    const char *path = item->section && *item->section ? item->section : "Settings";
+    if (*path == '/') return NULL;
+    for (const char *p = path; *p; ++p)
+        if (*p == '/' && (p[1] == '/' || p[1] == '\0')) return NULL;
+    return path;
 }
 
 static size_t first_component_len(const char *path) {
@@ -64,6 +71,7 @@ static void open_page_path(const RecompRuntimeUi *ui, char *out, size_t size) {
 /* 1: path is the page itself. 2: path is below it (*rest = what follows the
  * page and its '/'). 0: unrelated. */
 static int path_relation(const char *path, const char *page, const char **rest) {
+    if (!path) return 0;
     const size_t n = strlen(page);
     if (strncmp(path, page, n) != 0) return 0;
     if (path[n] == '\0') return 1;
@@ -192,6 +200,7 @@ RecompRuntimeUi *recomp_runtime_ui_create(const RecompRuntimeUiConfig *config) {
     /* Top-level sections are the first path components, in first-seen order. */
     for (size_t i = 0; i < config->item_count; ++i) {
         const char *path = item_path(&config->items[i]);
+        if (!path) continue;
         const size_t len = first_component_len(path);
         int known = 0;
         for (size_t j = 0; j < ui->section_count && !known; ++j)

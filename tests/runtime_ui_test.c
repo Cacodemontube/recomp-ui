@@ -323,6 +323,10 @@ int main(void) {
             { "c", "Mods/Two", "C", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
             { "d", "Mods/One", "D", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
             { "flat", "Video", "Flat", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
+            /* Malformed paths are left out: no extra rows, sections or folders. */
+            { "x", "Mods/One/", "X", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
+            { "y", "Mods//Y", "Y", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
+            { "z", "/Z", "Z", NULL, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, NULL, 0, NULL },
         };
         static uint32_t pic[256 * 224];
         RecompRuntimeUiConfig nested = {0};
@@ -360,14 +364,23 @@ int main(void) {
         press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);
         assert(nested_values['f' - 'a'] == 1);
         assert(nested_values['b' - 'a'] == 1 && nested_values['c' - 'a'] == 1);
-        press(n, RECOMP_RUNTIME_UI_INPUT_BACK);
+        press(n, RECOMP_RUNTIME_UI_INPUT_BACK);     /* section list, on Video */
+        press(n, RECOMP_RUNTIME_UI_INPUT_DOWN);     /* only Mods and Video exist, */
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* so this wraps to Mods */
+        press(n, RECOMP_RUNTIME_UI_INPUT_UP);       /* rows One, Two: wraps to Two */
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* (no third, unnamed folder) */
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* C */
+        assert(nested_values['c' - 'a'] == 0);
+        assert(nested_values['x' - 'a'] == 0 && nested_values['y' - 'a'] == 0 &&
+               nested_values['z' - 'a'] == 0);
+        press(n, RECOMP_RUNTIME_UI_INPUT_BACK);     /* Mods */
+        press(n, RECOMP_RUNTIME_UI_INPUT_BACK);     /* section list */
         press(n, RECOMP_RUNTIME_UI_INPUT_BACK);     /* closes the menu */
         assert(!recomp_runtime_ui_is_open(n));
         /* Reopening returns to the section list (the selected section is
          * remembered, as before), never into a sub-page left open. */
         recomp_runtime_ui_open(n);
-        press(n, RECOMP_RUNTIME_UI_INPUT_UP);       /* back to Mods */
-        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* Mods root: One, Two */
+        press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* Mods (remembered): One, Two */
         press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* One */
         press(n, RECOMP_RUNTIME_UI_INPUT_ACCEPT);   /* A, the first row */
         assert(nested_values['a' - 'a'] == 0);
