@@ -1,6 +1,9 @@
 #include "recomp_runtime_ui.h"
 #include "imgui.h"
 #include "imgui_internal.h"
+/* Include the production drawer to drive its item/section mouse seams directly,
+ * without depending on the outer menu's pixel layout. */
+#include "../src/common/backends/imgui/runtime_ui_imgui.cpp"
 
 #include <cassert>
 #include <cmath>
@@ -139,9 +142,81 @@ void toast_case() {
     recomp_runtime_ui_destroy(ui);
 }
 
+ImVec2 nested_frame(RecompRuntimeUi *ui, bool sections = false) {
+    ImGui::NewFrame();
+    ImGui::SetNextWindowPos(ImVec2(20, 20));
+    ImGui::SetNextWindowSize(ImVec2(600, 400));
+    ImGui::Begin("nested mouse test");
+    const LauncherTheme theme = launcher_theme_default();
+    if (sections) draw_sections(ui, theme, false);
+    else draw_items(ui, theme, false);
+    const ImRect last = GImGui->LastItemData.Rect;
+    const ImVec2 center = last.GetCenter();
+    ImGui::End();
+    ImGui::Render();
+    return center;
+}
+
+void nested_mouse_case() {
+    static const RecompRuntimeUiItem items[] = {
+        { "root", "Mods", "Root", nullptr, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, nullptr, 0, nullptr },
+        { "child", "Mods/Child", "Child item", nullptr, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, nullptr, 0, nullptr },
+        { "video", "Video", "Video item", nullptr, RECOMP_RUNTIME_UI_BOOL, 0, 1, 1, nullptr, 0, nullptr },
+    };
+    int value = 0;
+    RecompRuntimeUiConfig config{};
+    config.items = items;
+    config.item_count = 3;
+    config.callbacks.context = &value;
+    config.callbacks.get_value = get_value;
+    config.callbacks.set_value = set_value;
+    RecompRuntimeUi *ui = recomp_runtime_ui_create(&config);
+    assert(ui != nullptr);
+    recomp_runtime_ui_open(ui);
+    recomp_runtime_ui_enter_section(ui, 0);
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.IniFilename = nullptr;
+    io.DisplaySize = ImVec2(1280, 720);
+    io.DeltaTime = 1.0f / 60.0f;
+    unsigned char *pixels; int width, height;
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
+    nested_frame(ui);
+    const ImVec2 folder = nested_frame(ui);
+    io.AddMousePosEvent(folder.x, folder.y);
+    nested_frame(ui);
+    io.AddMouseButtonEvent(0, true);
+    nested_frame(ui);
+    io.AddMouseButtonEvent(0, false);
+    nested_frame(ui);
+    assert(std::strcmp(ui->page, "Child") == 0);
+    assert(ui->row_index == 0);
+    recomp_runtime_ui_handle_input(ui, RECOMP_RUNTIME_UI_INPUT_ACCEPT, 1, 0);
+    assert(value == 1);  // the only child is immediately usable after the click
+    recomp_runtime_ui_handle_input(ui, RECOMP_RUNTIME_UI_INPUT_BACK, 1, 0);
+    assert(ui->row_index == 1);  // Back still selects the parent folder
+    recomp_runtime_ui_handle_input(ui, RECOMP_RUNTIME_UI_INPUT_ACCEPT, 1, 0);
+    assert(std::strcmp(ui->page, "Child") == 0);
+
+    io.AddMousePosEvent(-100, -100);
+    nested_frame(ui, true);
+    const ImVec2 video = nested_frame(ui, true);
+    io.AddMousePosEvent(video.x, video.y);
+    nested_frame(ui, true);
+    assert(ui->section_index == 1 && ui->page[0] == '\0');
+    assert(ui->page_depth == 0 && ui->row_index == 0 && ui->in_section);
+    recomp_runtime_ui_handle_input(ui, RECOMP_RUNTIME_UI_INPUT_ACCEPT, 1, 0);
+    assert(value == 0);  // Video's root item is usable without backing out
+
+    ImGui::DestroyContext();
+    recomp_runtime_ui_destroy(ui);
+}
+
 } // namespace
 
 int main() {
+    nested_mouse_case();
     toast_case();
     render_case(0, ImVec2(1280.0f, 720.0f), 779.0f, 671.0f, 781.0f);
     render_case(RECOMP_RUNTIME_UI_PRESENTATION_TOUCH_FRIENDLY,

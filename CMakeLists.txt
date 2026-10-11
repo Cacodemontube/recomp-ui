@@ -654,7 +654,6 @@ if(BUILD_TESTING)
         tests/runtime_ui_imgui_test.cpp
         src/common/recomp_runtime_ui.c
         src/common/recomp_runtime_settings.c
-        src/common/backends/imgui/runtime_ui_imgui.cpp
         src/third_party/imgui/imgui.cpp
         src/third_party/imgui/imgui_draw.cpp
         src/third_party/imgui/imgui_tables.cpp
