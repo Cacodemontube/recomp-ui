@@ -957,6 +957,10 @@ static void draw_standalone_builtin_rom_picker(LauncherModel* m,
 // dashboard vs hug its content in the narrow stacked layout). Same pattern as
 // the other per-frame context globals below (g_th, g_pads).
 bool g_game_fill_h = false;
+// Visible dashboard height, independent of scrolling or AutoResizeY content.
+// Using a card's previous content height would keep hidden artwork from ever
+// returning when the user makes the window larger again.
+float g_game_visible_h = 0.0f;
 // SAVE (memory-card) fill-height: multitap (3+) only — cards stretch in a
 // reserved band under a scrolling controller stack. 2P hugs content; edge
 // inset comes from Child WindowPadding (same top/bottom as other panels).
@@ -2202,16 +2206,25 @@ void draw_game_panel(LauncherModel* m, const LauncherTheme& th, bool fill_h = fa
         // Disc Selection label + combo + spacing, for a multi-image title.
         if (launcher_model_disc_count(m) > 1) reserve += px(62.0f);
         if (m->saves_supported) reserve += px(96.0f);    // compact SAVES row below Change ROM
-        if (m->password_save_path) reserve += px(96.0f); // password-save row (same footprint)
+        if (m->password_save_path || m->password_sram_path)
+            reserve += px(96.0f);                      // password-save row (same footprint)
         if (m->bios_name && launcher_model_bios_missing(m)) reserve += px(110.0f);  // "required" notice
         if (m->msu1_patch_available) reserve += px(198.0f);  // MSU-1 patch-available sub-block
                                                               // (title + up-to-3-line wrapped note + 2 stacked buttons)
-        float art_h = ImGui::GetContentRegionAvail().y - reserve;
+        if (builtin_file_picker_should_be_offered()) reserve += px(84.0f);
+        if (m->setup_error[0])
+            reserve += ImGui::CalcTextSize(m->setup_error, nullptr, false, availw).y
+                       + ImGui::GetStyle().ItemSpacing.y;
+        const float card_h = g_game_visible_h - ImGui::GetStyle().WindowPadding.y * 2.0f;
+        float art_h = card_h - reserve;
         if (art_h > px(368.0f)) art_h = px(368.0f);   // allow a larger hero box art (~15% bigger than before)
-        if (art_h < px(248.0f)) art_h = px(248.0f);   // keep it big enough to balance the side column
-        hero_boxart_centered(g_boxart, art_h, availw);
+        // Artwork yields to controls. Below a useful thumbnail size, omit it
+        // (and its spacer) instead of forcing the metadata below the fold.
+        if (art_h >= px(96.0f)) {
+            hero_boxart_centered(g_boxart, art_h, availw);
+            ImGui::Dummy(ImVec2(0, px(10)));
+        }
     }
-    ImGui::Dummy(ImVec2(0, px(10)));
 
     // Region + verification state, centered under the art.
     const char* noun = (m->rom_noun && m->rom_noun[0]) ? m->rom_noun : "ROM";
@@ -3538,6 +3551,7 @@ void panel_controller_draw(LauncherModel* m, const LauncherTheme* th) {
 // draw_save_row). A different system's profile simply contributes a
 // different panel list.
 void draw_dashboard(LauncherModel* m, const LauncherTheme& th, int logical_w) {
+    g_game_visible_h = ImGui::GetWindowHeight();
     const SystemProfile* prof = (const SystemProfile*)m->profile;
     const LauncherPanel* game_p = find_composed(prof->panels_dashboard, "game", m);
     const LauncherPanel* ctrl_p = find_composed(prof->panels_dashboard, "controller", m);
