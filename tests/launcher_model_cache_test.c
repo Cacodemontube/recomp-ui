@@ -96,5 +96,36 @@ int main(int argc, char** argv) {
                      "valid initial_rom should win"))
         return 9;
 
+    /* Named host shortcuts must work without replacing a legacy game's
+     * gameplay binding store. Exercise capture, commit/reload and reset. */
+    static const char* labels[] = {"Quick Save", "Quick Load"};
+    game.settings_bindings = 0;
+    game.assist_binding_labels = labels;
+    game.assist_binding_count = 2;
+    settings.player_key_bind[0][0] = 17;
+    launcher_model_init(&model, &settings, &game, rom);
+    launcher_model_begin_assist_capture(&model, 0, false);
+    if (!model.capturing || !model.capture_assist || model.capture_pad) return 13;
+    launcher_model_set_captured_key(&model, 66);
+    launcher_model_cancel_capture(&model);
+    const int chord = RECOMP_LAUNCHER_PAD_BUTTON_COMBO((1u << 4) | (1u << 8));
+    launcher_model_begin_assist_capture(&model, 1, true);
+    if (!model.capturing || !model.capture_assist || !model.capture_pad) return 14;
+    launcher_model_set_captured_pad(&model, chord);
+    launcher_model_cancel_capture(&model);
+    launcher_model_commit(&model, &settings);
+    launcher_model_init(&model, &settings, &game, rom);
+    if (model.s.assist_key_bind[0] != 66 || model.s.assist_pad_bind[1] != chord ||
+        model.s.player_key_bind[0][0] != 17 || model.settings_bindings) return 15;
+    launcher_model_set_captured_key(&model, 0); /* no active capture */
+    if (model.s.assist_key_bind[0] != 66) return 16;
+    launcher_model_begin_assist_capture(&model, -1, false);
+    launcher_model_begin_assist_capture(&model, 2, false);
+    launcher_model_begin_assist_capture(NULL, 0, false);
+    if (model.capturing) return 17;
+    model.s.assist_key_bind[0] = 0;
+    model.s.assist_pad_bind[1] = 0;
+    launcher_model_reset_assist_bindings(&model);
+    if (model.s.assist_key_bind[0] != 66 || model.s.assist_pad_bind[1] != chord) return 18;
     return 0;
 }

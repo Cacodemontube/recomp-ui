@@ -1342,6 +1342,8 @@ struct RecompLauncherCSettings {
     // ABI stability.
     int  assist_fast_forward_multiplier;
 
+    /* Named host shortcuts are independent of settings_bindings: a host can
+     * retain its legacy gameplay binding store and still consume these. */
     int assist_key_bind[RECOMP_LAUNCHER_MAX_ASSIST_BINDINGS];
     int assist_pad_bind[RECOMP_LAUNCHER_MAX_ASSIST_BINDINGS];
 
