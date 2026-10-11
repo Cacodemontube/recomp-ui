@@ -11174,7 +11174,9 @@ void draw_netplay(LauncherModel* m, const LauncherTheme& th) {
                 ImGui::TextColored(col(th.text_muted), "No");
             ImGui::TableSetColumnIndex(3);
             table_row_vcenter(lobby_row_h, text_h);
-            if (row.latency_ms >= 0)
+            if (row.latency_ms >= 0 && row.latency_is_estimate)
+                ImGui::TextColored(col(th.text_muted), "~%d ms", row.latency_ms);
+            else if (row.latency_ms >= 0)
                 ImGui::Text("%d ms", row.latency_ms);
             else
                 ImGui::TextColored(col(th.text_muted), "—");

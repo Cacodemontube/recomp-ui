@@ -101,6 +101,10 @@ typedef struct RecompLauncherCNetplayLobby {
     int  allow_spectators;
     int  max_spectators;
     int  spectator_count;
+    /* 1 when latency_ms is a through-the-server estimate rather than a timed
+     * direct link to the host (drawn with a "~"). 0 from a backend that
+     * predates the field, which reads as measured. */
+    int  latency_is_estimate;
 } RecompLauncherCNetplayLobby;
 
 /* One player connected to the lobby server, seated or just browsing -- the
