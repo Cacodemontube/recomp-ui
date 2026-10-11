@@ -1582,6 +1582,17 @@ ImU32 imcol(const LngColor& c, float a = 1.0f) {
 void draw_crt_background(ImVec2 origin, ImVec2 size) {
     const LauncherTheme& th = *g_th;
     ImDrawList* bg = ImGui::GetBackgroundDrawList();
+#ifdef DOOM_LAUNCHER
+    const float greenEndY = origin.y + size.y * 0.25f;
+    const ImU32 dark = IM_COL32(0, 2, 0, 255);
+    bg->AddRectFilledMultiColor(origin, ImVec2(origin.x + size.x, greenEndY),
+                                IM_COL32(0, 52, 9, 255), IM_COL32(0, 52, 9, 255),
+                                dark, dark);
+    bg->AddRectFilledMultiColor(ImVec2(origin.x, greenEndY),
+                                ImVec2(origin.x + size.x, origin.y + size.y),
+                                dark, dark,
+                                IM_COL32(0, 0, 0, 255), IM_COL32(0, 0, 0, 255));
+#else
     ImU32 ink = imcol(th.background), lift = imcol(th.background2);
     float midY = origin.y + size.y * 0.42f;
     // top: ink -> lift, bottom: lift -> ink  (soft horizontal glow band)
@@ -1593,6 +1604,7 @@ void draw_crt_background(ImVec2 origin, ImVec2 size) {
     bg->AddRectFilledMultiColor(origin, ImVec2(origin.x + size.x, origin.y + px(90)),
                                 imcol(th.accent, 0.10f), imcol(th.accent, 0.10f),
                                 imcol(th.accent, 0.0f),  imcol(th.accent, 0.0f));
+#endif
     // scanlines over everything, very subtle — only for CRT-style themes (the PSX
     // theme sets scanlines = 0 for a flat, disc-era look).
     if (th.scanlines) {
@@ -13949,6 +13961,9 @@ extern "C" LngAction launcher_backend_run(LauncherPlatform* p,
         // Only load when there's an actual filename.
         const char* brand_file = bprof && bprof->brand
                                    ? bprof->brand : "brand_mark.tga";
+#ifdef DOOM_LAUNCHER
+        brand_file = "logo1.png";
+#endif
         if (brand_file && brand_file[0])
             g_brand = launcher_texture_load(
                 asset((std::string("assets/img/") + brand_file).c_str()).c_str());
